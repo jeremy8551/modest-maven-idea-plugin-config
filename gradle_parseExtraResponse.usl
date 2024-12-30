@@ -1,0 +1,68 @@
+
+set html="${responseBody}"
+# echo "html: ${responseBody}"
+
+set startSearch = 0
+
+# 搜索字符串
+function searchStr() {
+    set indexStr="$1"
+    set begin = html.indexOf("${indexStr}", $startSearch)
+    if $begin == -1 then
+        exit 0
+    else
+        set startSearch=$begin + indexStr.length()
+    fi
+}
+
+# 解析日期: Created 02 September 2024.
+function parseDate() {
+    set dateStr="$1"
+    set prefixDateStr = "Created "
+    set createBegin = dateStr.indexOf("$prefixDateStr", 0) + prefixDateStr.length()
+    set createEnd = dateStr.indexOf(".", $createBegin)
+    set gradlePluginDateStr = timeStr.substr(${createBegin}, ${createEnd})
+    return 0
+}
+
+set findStr = "version-info well well-sm"
+searchStr "${findStr}"
+set startSearch=$startSearch - findStr.length() - 14
+
+set divTag = html.readTag("div", $startSearch).replace("&nbsp;", "")
+set startSearch = $startSearch + divTag.length()
+#echo "divTag: ${divTag}"
+
+set devObj = divTag.newDocument().getChildNodes("div").item(0)
+set gradlePluginVersion = devObj.getChildNodes("p").filter("id=plugin-id-version").item(0).getTextContent().trim()
+set timeStr = devObj.getChildNodes("p").filter("class=version-created-date").item(0).getTextContent().trim()
+set gradlePluginHref = "${address}/plugin/${gradlePluginID}/${gradlePluginVersion}"
+
+parseDate "${timeStr}"
+
+echo "gradlePluginID: ${gradlePluginID}, version: ${gradlePluginVersion}, date: ${gradlePluginDateStr}, href: ${gradlePluginHref}"
+gradlePluginList.addGradlePlugin("gradlePluginID", "gradlePluginVersion", "gradlePluginDateStr", "gradlePluginHref", "")
+
+set otherVersions = devObj.getChildNodes("div").filter("class=other-versions dropdown")
+if otherVersions.size() == 0 then
+    exit 0
+fi
+
+set divOtherVersions = otherVersions.item(0)
+set liNodes = divOtherVersions.getChildNodes("ul").item(0).getChildNodes("li")
+set length = liNodes.size();
+set index = 0
+while $index < $length loop
+    set gradlePluginVersion = ""
+    set gradlePluginHref = ""
+
+    set gradlePluginVersion = liNodes.item(${index}).getChildNodes("a").item(0).getTextContent().trim()
+    set gradlePluginHref = "${address}/plugin/${gradlePluginID}/${gradlePluginVersion}"
+
+    #echo "gradlePluginID: ${gradlePluginID}, version: ${gradlePluginVersion}, href: ${gradlePluginHref}"
+    gradlePluginList.addGradlePlugin("gradlePluginID", "gradlePluginVersion", "", "gradlePluginHref", "")
+
+    set index = $index + 1
+end loop
+
+exit 0

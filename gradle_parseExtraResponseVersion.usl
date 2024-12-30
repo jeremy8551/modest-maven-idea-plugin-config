@@ -1,0 +1,42 @@
+
+set html="${responseBody}"
+# echo "html: ${responseBody}"
+
+set startSearch = 0
+
+# 搜索字符串
+function searchStr() {
+    set indexStr="$1"
+    set begin = html.indexOf("${indexStr}", $startSearch)
+    if $begin == -1 then
+        exit 1
+    else
+        set startSearch=$begin + indexStr.length()
+    fi
+}
+
+# 解析日期
+# 参数1: 插件创建日期, 格式: Created 02 September 2024.
+function parseDate() {
+    set dateStr="$1"
+    set prefixDateStr = "Created "
+    set createBegin = dateStr.indexOf("$prefixDateStr", 0) + prefixDateStr.length()
+    set createEnd = dateStr.indexOf(".", $createBegin)
+    set gradlePluginDateStr = timeStr.substr(${createBegin}, ${createEnd})
+    return 0
+}
+
+set findStr = "version-info well well-sm"
+searchStr "${findStr}"
+set startSearch=$startSearch - findStr.length() - 14
+
+set divTag = html.readTag("div", $startSearch).replace("&nbsp;", "")
+set startSearch = $startSearch + divTag.length()
+#echo "divTag: ${divTag}"
+
+set devObj = divTag.newDocument().getChildNodes("div").item(0)
+set timeStr = devObj.getChildNodes("p").filter("class=version-created-date").item(0).getTextContent().trim()
+
+parseDate "${timeStr}"
+
+exit 0

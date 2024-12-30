@@ -1,0 +1,70 @@
+
+set html="${responseBody}"
+# echo "html: ${responseBody}"
+
+set startSearch = 0
+
+# 搜索字符串
+function searchStr() {
+    set indexStr="$1"
+    set begin = html.indexOf("${indexStr}", $startSearch)
+    if $begin == -1 then
+        exit 1
+    else
+        set startSearch=$begin + indexStr.length()
+    fi
+}
+
+searchStr "Search Results"
+searchStr "Search Results"
+searchStr "Search Results"
+
+# <div class="smaller" style="background-color:#e0dbd2; padding:3px; border:1px solid #706c60; margin-bottom:10px">
+# There are <b>224</b> CVE Records that match your search.
+# </div>
+set divTag = html.readTag("div", $startSearch)
+set startSearch = $startSearch + divTag.length()
+
+# There are 224 CVE Records that match your search.
+set divTagText = divTag.newDocument().getChildNodes().item(0).getTextContent();
+export set foundNumber = divTagText.trim().split()[2]
+echo "foundNumber: ${foundNumber}"
+
+if $foundNumber == 0 then
+    exit 0
+fi
+
+set trNodes = html.readTag("table", $startSearch).newDocument().getChildNodes().item(0).getChildNodes("tr");
+set length = trNodes.size();
+set index = 0
+while $index < $length loop
+    set trNode = trNodes.item(${index})
+
+	#<tr>
+	#  <td valign="top" nowrap="nowrap"><a href="https://www.cve.org/CVERecord?id=CVE-2024-6834">CVE-2024-6834</a></td>
+	#  <td valign="top">A vulnerability in APIML Spring Cloud Gateway which leverages user privileges by unexpected signing proxied request by Zowe's client certificate. This allows access to a user to the endpoints requiring an internal client certificate without any credentials. It could lead to managing components in there and allow an attacker to handle the whole communication including user credentials.
+    #</td>
+
+    set tdNodes = trNode.getChildNodes("td");
+
+    if tdNodes.check(0) then
+        set cveId = tdNodes.getTextContent().trim()
+        set cvfHref = tdNodes.getChildNodes("a").item(0).getAttribute("href").trim()
+        #echo "cveId: $cveId, cvfHref: $cvfHref "
+    fi
+
+    if tdNodes.check(1) then
+        set tdCveDescription = tdNodes.item(1).getTextContent().trim()
+        #echo "tdCveDescription: $tdCveDescription"
+    fi
+
+    cveList.addCveInfo("cveId", "cvfHref", "tdCveDescription")
+
+    set cveId=""
+    set cvfHref=""
+    set tdCveDescription=""
+
+    set index = $index + 1
+end loop
+
+exit 0

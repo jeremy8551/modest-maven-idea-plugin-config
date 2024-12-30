@@ -1,0 +1,62 @@
+
+set html="${responseBody}"
+# echo "html: ${responseBody}"
+
+set startSearch = 0
+
+# 搜索字符串
+function searchStr() {
+    set indexStr="$1"
+    set begin = html.indexOf("${indexStr}", $startSearch)
+    if $begin == -1 then
+        exit 1
+    else
+        set startSearch=$begin + indexStr.length()
+    fi
+}
+
+searchStr "search-results"
+
+set tbodyTag = html.readTag("tbody", $startSearch)
+set startSearch = $startSearch + tbodyTag.length()
+#echo "tbodyTag: ${tbodyTag}"
+
+set trNodes = tbodyTag.newDocument().getChildNodes("tbody").item(0).getChildNodes("tr");
+set length = trNodes.size();
+echo "has tr nodes: ${length}"
+set index = 0
+while $index < $length loop
+    set tdNodes = trNodes.item(${index}).getChildNodes("td");
+
+    # 搜索结果为空
+    if tdNodes.size() == 1 then
+        echo "<em>No plugins found.</em>"
+        exit 0
+    fi
+
+    if tdNodes.check(0) then
+        set tdNode = tdNodes.item(0)
+        set aTag = tdNode.getChildNodes("h3").item(0).getChildNodes("a").item(0)
+        set gradlePluginHref = aTag.getAttribute("href").trim()
+        set gradlePluginID = aTag.getTextContent().trim()
+        set gradlePluginDescription = tdNode.getChildNodes("p").item(0).getTextContent()
+    fi
+
+    if tdNodes.check(1) then
+        set gradlePluginVersion = tdNodes.item(1).getChildNodes("span").item(0).getTextContent().trim()
+        set gradlePluginDateStr = tdNodes.item(1).getChildNodes("span").item(1).getTextContent().trim()
+    fi
+
+    #echo "gradlePluginID: ${gradlePluginID}, version: ${gradlePluginVersion}, dates: ${gradlePluginDateStr}, href: ${gradlePluginHref}, desc: ${gradlePluginDescription}"
+    gradlePluginList.addGradlePlugin("gradlePluginID", "gradlePluginVersion", "gradlePluginDateStr", "gradlePluginHref", "gradlePluginDescription")
+
+    set gradlePluginID = ""
+    set gradlePluginVersion = ""
+    set gradlePluginDateStr = ""
+    set gradlePluginHref = ""
+    set gradlePluginDescription = ""
+
+    set index = $index + 1
+end loop
+
+exit 0
