@@ -1,6 +1,7 @@
 query.use.central
 query.use.local
 query.use.class
+-query.use.coderead
 -query.use.cve
 query.use.gradle
 -query.use.aliyun
